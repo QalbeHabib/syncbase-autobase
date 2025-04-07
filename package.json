@@ -30,6 +30,8 @@
     "z32": "^1.1.0"
   },
   "devDependencies": {
+    "brittle": "^3.13.1",
+    "random-access-memory": "^6.2.1",
     "rimraf": "^6.0.1"
   }
 }

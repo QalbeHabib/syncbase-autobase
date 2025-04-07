@@ -16,7 +16,7 @@
       "trigger": null
     },
     {
-      "name": "channels",
+      "name": "channel",
       "namespace": "server",
       "id": 1,
       "type": 1,
@@ -29,7 +29,7 @@
       "trigger": null
     },
     {
-      "name": "messages",
+      "name": "message",
       "namespace": "server",
       "id": 2,
       "type": 1,
@@ -42,7 +42,7 @@
       "trigger": null
     },
     {
-      "name": "users",
+      "name": "user",
       "namespace": "server",
       "id": 3,
       "type": 1,
@@ -55,7 +55,7 @@
       "trigger": null
     },
     {
-      "name": "roles",
+      "name": "role",
       "namespace": "server",
       "id": 4,
       "type": 1,
@@ -63,12 +63,13 @@
       "schema": "@server/role",
       "derived": false,
       "key": [
+        "userId",
         "serverId"
       ],
       "trigger": null
     },
     {
-      "name": "invites",
+      "name": "invite",
       "namespace": "server",
       "id": 5,
       "type": 1,
