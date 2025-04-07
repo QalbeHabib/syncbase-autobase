@@ -44,7 +44,6 @@ async function testServerInitialization() {
 
   // Create a new SyncBase instance with a seed phrase
   const server = new SyncBase(store, {
-    replicate: false, // Disable replication for this test
     seedPhrase: 'test seed phrase for server initialization'
   })
 
@@ -66,7 +65,6 @@ async function testServerInitialization() {
 
   // Get server info
   const serverInfo = await server.getServerInfo()
-  console.log(serverInfo)
   assert(serverInfo, 'Server info should exist after initialization')
   assert.equal(serverInfo.name, 'Test Server', 'Server name should match')
   assert.equal(serverInfo.description, 'A server for testing the SyncBase architecture', 'Server description should match')
