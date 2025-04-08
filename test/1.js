@@ -119,17 +119,17 @@ async function testChannelOperations() {
     type: 'TEXT',
     topic: 'General discussions'
   })
-  assert(generalChannel.id, 'Channel should have an ID')
+  assert(generalChannel.channelId, 'Channel should have an ID')
   assert.equal(generalChannel.name, 'general-2', 'Channel name should match')
   console.log('✓ Created general channel')
 
-  await sleep(100)
+  await sleep(300)
   const announcementsChannel = await server.channels.createChannel({
     name: 'announcements',
     type: 'TEXT',
     topic: 'Important server announcements'
   })
-  await sleep(100)
+  await sleep(200)
 
   console.log('✓ Created announcements channel')
 
@@ -139,19 +139,20 @@ async function testChannelOperations() {
   console.log(`✓ Server has ${channels.length} channels as expected`)
 
   // Verify the channel creator is correctly recorded
-  const channelData = await server.channels.getChannel(generalChannel.id)
+  const channelData = await server.channels.getChannel(generalChannel.channelId)
   assert.equal(channelData.createdBy, creatorId, 'Channel creator should match the public key of the server creator')
   console.log('✓ Channel creator correctly recorded')
 
   // Get channel by ID
-  const retrievedChannel = await server.channels.getChannel(generalChannel.id)
+  const retrievedChannel = await server.channels.getChannel(generalChannel.channelId)
   console.log(retrievedChannel)
-  assert.equal(retrievedChannel.id, generalChannel.id, 'Retrieved channel ID should match')
+  assert.equal(retrievedChannel.channelId, generalChannel.channelId, 'Retrieved channel ID should match')
   console.log('✓ Retrieved channel correctly')
 
   // Update channel
   const updatedChannel = await server.channels.updateChannel({
-    channelId: generalChannel.id,
+    id: generalChannel.id,
+    channelId: generalChannel.channelId,
     name: 'general-chat3',
     topic: 'Updated topic'
   })
@@ -163,7 +164,7 @@ async function testChannelOperations() {
   console.log('✓ Updated channel successfully')
 
   // Delete channel
-  await server.channels.deleteChannel(announcementsChannel.id)
+  await server.channels.deleteChannel(announcementsChannel.channelId)
   await sleep(100)
 
   const remainingChannels = await server.channels.getChannels()
@@ -200,7 +201,7 @@ async function testMessageOperations() {
 
   // Send messages
   const message1 = await server.messages.sendMessage({
-    channelId: channel.id,
+    channelId: channel.channelId,
     content: 'Hello world! This is test message 1.'
   })
   assert(message1.id, 'Message should have an ID')
@@ -213,7 +214,7 @@ async function testMessageOperations() {
   console.log('✓ Sent message 2')
 
   // Get messages from channel
-  const messages = await server.messages.getMessages({ channelId: channel.id })
+  const messages = await server.messages.getMessages({ channelId: channel.channelId })
   assert.equal(messages.length, 2, 'Channel should have 2 messages')
   console.log(`✓ Retrieved ${messages.length} messages from channel`)
 
@@ -237,7 +238,7 @@ async function testMessageOperations() {
 
   // Delete a message
   await server.messages.deleteMessage({ messageId: message1.id })
-  const remainingMessages = await server.messages.getMessages({ channelId: channel.id })
+  const remainingMessages = await server.messages.getMessages({ channelId: channel.channelId })
   assert.equal(remainingMessages.length, 1, 'One message should remain after deletion')
   console.log('✓ Deleted message successfully')
 

@@ -24,7 +24,7 @@
       "schema": "@server/channel",
       "derived": false,
       "key": [
-        "id"
+        "channelId"
       ],
       "trigger": null
     },

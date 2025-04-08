@@ -43,10 +43,16 @@
       "name": "channel",
       "namespace": "server",
       "compact": false,
-      "flagsPosition": 3,
+      "flagsPosition": 4,
       "fields": [
         {
           "name": "id",
+          "required": true,
+          "type": "string",
+          "version": 1
+        },
+        {
+          "name": "channelId",
           "required": true,
           "type": "string",
           "version": 1
@@ -204,7 +210,7 @@
     {
       "name": "role",
       "namespace": "server",
-      "compact": true,
+      "compact": false,
       "flagsPosition": 3,
       "fields": [
         {
