@@ -192,7 +192,7 @@ async function testMessageOperations() {
 
   // Create a channel for messages
   const channel = await server.channels.createChannel({
-    name: 'general',
+    name: 'general5',
     type: 'TEXT'
   })
   console.log('✓ Created test channel')
@@ -217,32 +217,32 @@ async function testMessageOperations() {
   console.log(`✓ Retrieved ${messages.length} messages from channel`)
 
   // Verify message author is recorded correctly
-  const messageData = await server.messages.getMessage(message1.id)
+  const messageData = await server.messages.getMessage(message1.id, channel.channelId)
   assert.equal(messageData.author, creatorId, 'Message author should match the public key of the server creator')
   console.log('✓ Message author correctly recorded')
 
   // Edit a message
   const editedMessage = await server.messages.editMessage({
     messageId: message2.id,
+    channelId: message2.channelId,
     content: 'This message has been edited!'
   })
   assert.equal(editedMessage.content, 'This message has been edited!', 'Message content should be updated')
   console.log('✓ Edited message successfully')
 
   // Retrieve edited message
-  const retrievedMessage = await server.messages.getMessage(message2.id)
+  const retrievedMessage = await server.messages.getMessage(message2.id, message2.channelId)
+  console.log({retrievedMessage})
   assert.equal(retrievedMessage.content, 'This message has been edited!', 'Retrieved message should have updated content')
   console.log('✓ Retrieved edited message successfully')
 
   const beforeDelete = await server.messages.getMessages({ channelId: channel.channelId })
-  console.log({beforeDelete})
   // Delete a message
   console.log('Deleting', message1.id)
-  await server.messages.deleteMessage({ messageId: message1.id })
+  await server.messages.deleteMessage({ messageId: message1.id, channelId: message1.channelId })
 
   await sleep(1000)
   const remainingMessages = await server.messages.getMessages({ channelId: channel.channelId })
-  console.log({remainingMessages})
   assert.equal(remainingMessages.length, 1, 'One message should remain after deletion')
   console.log('✓ Deleted message successfully')
   await server.close()
@@ -275,7 +275,7 @@ async function testServerReplication() {
   })
 
   await server1.messages.sendMessage({
-    channelId: channel.id,
+    channelId: channel.channelId,
     content: 'This message should replicate to the joined server'
   })
   console.log('✓ Created channel and message in source server')
@@ -294,11 +294,11 @@ async function testServerReplication() {
 
   console.log('✓ Starting server join process with invite')
   const joiner = SyncBase.pair(store2, invite, {
-    bootstrap: [],
     seedPhrase: 'test seed phrase for joining server'
   })
-
-  await joiner.ready()
+  const joinerClient = await joiner.finished()
+  console.log('Pair up!')
+  await joinerClient.ready()
 
   try {
     // This would normally connect to the network but we're testing locally

@@ -37,7 +37,8 @@
       "schema": "@server/message",
       "derived": false,
       "key": [
-        "id"
+        "id",
+        "channelId"
       ],
       "trigger": null
     },

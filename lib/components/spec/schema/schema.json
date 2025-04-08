@@ -243,41 +243,29 @@
       "name": "invite",
       "namespace": "server",
       "compact": false,
-      "flagsPosition": 5,
+      "flagsPosition": 4,
       "fields": [
         {
           "name": "id",
           "required": true,
-          "type": "string",
+          "type": "buffer",
           "version": 1
         },
         {
-          "name": "code",
+          "name": "invite",
           "required": true,
-          "type": "string",
+          "type": "buffer",
           "version": 1
         },
         {
-          "name": "serverId",
+          "name": "publicKey",
           "required": true,
-          "type": "string",
+          "type": "buffer",
           "version": 1
         },
         {
-          "name": "createdBy",
+          "name": "expires",
           "required": true,
-          "type": "string",
-          "version": 1
-        },
-        {
-          "name": "createdAt",
-          "required": true,
-          "type": "int",
-          "version": 1
-        },
-        {
-          "name": "expiresAt",
-          "required": false,
           "type": "int",
           "version": 1
         },
