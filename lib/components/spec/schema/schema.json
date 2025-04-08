@@ -211,16 +211,10 @@
       "name": "role",
       "namespace": "server",
       "compact": false,
-      "flagsPosition": 3,
+      "flagsPosition": 2,
       "fields": [
         {
           "name": "userId",
-          "required": true,
-          "type": "string",
-          "version": 1
-        },
-        {
-          "name": "serverId",
           "required": true,
           "type": "string",
           "version": 1

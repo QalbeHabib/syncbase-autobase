@@ -145,7 +145,6 @@ async function testChannelOperations() {
 
   // Get channel by ID
   const retrievedChannel = await server.channels.getChannel(generalChannel.channelId)
-  console.log(retrievedChannel)
   assert.equal(retrievedChannel.channelId, generalChannel.channelId, 'Retrieved channel ID should match')
   console.log('✓ Retrieved channel correctly')
 
@@ -168,7 +167,6 @@ async function testChannelOperations() {
   await sleep(100)
 
   const remainingChannels = await server.channels.getChannels()
-  console.log({remainingChannels})
   assert.equal(remainingChannels.length, 2, 'One channel should remain after deletion')
   console.log('✓ Deleted channel successfully')
 
@@ -208,7 +206,7 @@ async function testMessageOperations() {
   console.log('✓ Sent message 1')
 
   const message2 = await server.messages.sendMessage({
-    channelId: channel.id,
+    channelId: channel.channelId,
     content: 'This is test message 2.'
   })
   console.log('✓ Sent message 2')

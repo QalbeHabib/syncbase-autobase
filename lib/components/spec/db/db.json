@@ -50,7 +50,8 @@
       "schema": "@server/user",
       "derived": false,
       "key": [
-        "id"
+        "id",
+        "publicKey"
       ],
       "trigger": null
     },
@@ -63,8 +64,7 @@
       "schema": "@server/role",
       "derived": false,
       "key": [
-        "userId",
-        "serverId"
+        "userId"
       ],
       "trigger": null
     },
