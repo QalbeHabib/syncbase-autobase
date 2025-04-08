@@ -86,7 +86,7 @@ async function testServerInitialization() {
   // Confirm creator has OWNER role by their public key
   const creatorId = b4a.toString(server.crypto.publicKey, 'hex')
   const ownerRole = await server.roleManager.checkUserRole(creatorId, "OWNER")
-  console.log({ownerRole})
+  console.log({ ownerRole })
   assert(ownerRole, 'Owner role should exist')
   console.log('✓ Owner role is set correctly')
 
@@ -234,12 +234,17 @@ async function testMessageOperations() {
   assert.equal(retrievedMessage.content, 'This message has been edited!', 'Retrieved message should have updated content')
   console.log('✓ Retrieved edited message successfully')
 
+  const beforeDelete = await server.messages.getMessages({ channelId: channel.channelId })
+  console.log({beforeDelete})
   // Delete a message
+  console.log('Deleting', message1.id)
   await server.messages.deleteMessage({ messageId: message1.id })
+
+  await sleep(1000)
   const remainingMessages = await server.messages.getMessages({ channelId: channel.channelId })
+  console.log({remainingMessages})
   assert.equal(remainingMessages.length, 1, 'One message should remain after deletion')
   console.log('✓ Deleted message successfully')
-
   await server.close()
 }
 
@@ -323,6 +328,6 @@ runTests()
   })
 
 
-  function sleep(ms) {
-    return new Promise(resolve => setTimeout(resolve, ms));
+function sleep(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
 }
