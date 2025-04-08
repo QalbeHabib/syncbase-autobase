@@ -6,7 +6,7 @@
     "lib": "lib"
   },
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "node test/integration-test.js"
   },
   "keywords": [],
   "author": "",
@@ -21,15 +21,17 @@
     "debounceify": "^1.1.0",
     "hyperbee": "^2.22.2",
     "hypercore": "^11.0.9",
-    "hyperdb": "^4.9.4",
+    "hyperdb": "^4.10.0",
     "hyperdispatch": "^1.0.2",
     "hyperschema": "^1.10.4",
     "hyperswarm": "^4.8.4",
     "ready-resource": "^1.1.1",
+    "rebuild": "^0.1.2",
     "sodium-native": "^5.0.1",
     "z32": "^1.1.0"
   },
   "devDependencies": {
+    "assert": "^2.1.0",
     "brittle": "^3.13.1",
     "random-access-memory": "^6.2.1",
     "rimraf": "^6.0.1"

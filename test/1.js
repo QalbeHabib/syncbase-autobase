@@ -1,5 +1,3 @@
-// Set environment to development for testing
-process.env.NODE_ENV = 'development'
 
 const assert = require('assert')
 const Corestore = require('corestore')
@@ -9,318 +7,241 @@ const os = require('os')
 const rimraf = require('rimraf')
 const b4a = require('b4a')
 const SyncBase = require('../lib/syncbase')
-const CryptoManager = require('../lib/components/crypto-manager')
-const SyncBaseRouter = require('../lib/components/router')
-const ActionValidator = require('../lib/components/action-validator')
-const router = require('../lib/components/router')
-const validator = require('../lib/components/action-validator')
 
 // Test directory setup
-const TEST_DIR = path.join(os.tmpdir(), 'syncbase-test-' + Date.now())
+const TEST_DIR = path.join('./cores', 'syncbase-test-' + Date.now())
+console.log(TEST_DIR)
 fs.mkdirSync(TEST_DIR, { recursive: true })
-
-// Global syncBase instance used by all tests
-let syncBase = null;
-
-// Utility function for delay
-function delay(ms) {
-  return new Promise(resolve => setTimeout(resolve, ms))
-}
 
 // Cleanup function to run after tests
 function cleanup() {
-  // Delete test directory
-  if (fs.existsSync(TEST_DIR)) {
-    fs.rmSync(TEST_DIR, { recursive: true, force: true })
-  }
+  rimraf.sync(TEST_DIR)
 }
 
-/**
- * Run all tests
- */
 async function runTests() {
+  console.log('Starting SyncBase tests...')
+
   try {
-    console.log('Starting SyncBase tests...')
-    
-    try {
-      console.log('Test 1: Server Initialization')
-      await testServerInitialization()
-      console.log('✅ Server initialization tests passed!')
-    } catch (err) {
-      console.error('❌ Server initialization test failed:', err)
-    }
-    
-    try {
-      console.log('\nTest 2: Channel Operations')
-      await testChannelOperations()
-      console.log('✅ Channel operations tests passed!')
-    } catch (err) {
-      console.error('❌ Channel operations test failed:', err)
-    }
-    
-    try {
-      console.log('\nTest 3: Message Operations')
-      await testMessageOperations()
-      console.log('✅ Message operations tests passed!')
-    } catch (err) {
-      console.error('❌ Message operations test failed:', err)
-    }
-    
-    console.log('\nAll tests completed!')
+    await testServerInitialization()
+    await testChannelOperations()
+    await testMessageOperations()
+    await testServerReplication()
+
+    console.log('All tests passed!')
   } catch (err) {
-    console.error('Tests failed with error:', err)
+    console.error('Test failed:', err)
+    process.exit(1)
   } finally {
-    // Clean up resources
-    if (syncBase) {
-      console.log('Closing SyncBase...')
-      await syncBase.close()
-      console.log('SyncBase closed.')
-    }
+    cleanup()
   }
 }
 
-/**
- * Test server initialization
- */
 async function testServerInitialization() {
   console.log('\n--- Testing Server Initialization ---')
-  
-  // Set up the test environment
-  console.log('Starting SyncBase tests...')
-  
-  // Create the store
+
+  // Create a store using the same approach as the main application
   const storePath = path.join(TEST_DIR, 'server1')
   const store = new Corestore(storePath)
   await store.ready()
-  
-  // Initialize SyncBase
-  syncBase = new SyncBase(store, {
-    replicate: false, // Disable replication for faster tests
-    seedPhrase: 'test seed phrase for testing purpose only' // Use a known seed for reproducible tests
+
+  // Create a new SyncBase instance with a seed phrase
+  const server = new SyncBase(store, {
+    seedPhrase: 'test seed phrase for server initialization'
   })
-  
-  // Test server initialization
-  console.log('Testing server initialization...')
-  await syncBase.ready()
-  console.log('SyncBase is ready')
-  
-  // Verify server is not initialized yet
-  const serverInfo = await syncBase.serverInitializer.getServerInfo()
+
+  // Wait for the server to be ready
+  await server.ready()
   console.log('✓ SyncBase server is ready')
+
+  // Verify server is not initialized yet
+  const preInitInfo = await server.getServerInfo()
+  assert(!preInitInfo, 'Server should not be initialized yet')
   console.log('✓ Server correctly shows as not initialized')
-  
-  // Initialize the server
-  const serverName = 'Test Server'
-  const serverDescription = 'A test server created in the test file'
-  
-  // Initialize the server
-  const serverInitAction = syncBase.crypto.createSignedAction('@server/create-server', {
-    id: syncBase.crypto.generateId(),
-    name: serverName,
-    description: serverDescription,
-    avatar: null,
-    createdAt: Date.now()
+
+  // Initialize the server with a name
+  await server.initialize({
+    name: 'Test Server',
+    description: 'A server for testing the SyncBase architecture'
   })
-  
-  console.log({ serverInitAction })
-  
-  try {
-    const MessageParser = require('../lib/components/parser')
-    const encodedAction = await MessageParser.encodeAction(serverInitAction)
-    console.log({ encodedAction })
-    
-    await syncBase.base.append(encodedAction)
-    
-    await delay(1000) // Wait for the action to be processed
-    
-    console.log('Server initialized')
-    console.log('✓ Server initialized successfully')
-    
-    // Verify server info
-    const updatedServerInfo = await syncBase.serverInitializer.getServerInfo()
-    
-    if (updatedServerInfo && updatedServerInfo.name === serverName) {
-      console.log('✓ Server info is correct')
-    } else {
-      console.error('Server info is incorrect:', updatedServerInfo)
-      throw new Error('Server info verification failed')
-    }
-    
-    // Set the owner role directly in the database (since messaging might be broken)
-    try {
-      const userId = b4a.toString(syncBase.crypto.publicKey, 'hex')
-      await syncBase.base.view.insert('@server/role', {
-        userId,
-        role: 'owner',
-        serverId: updatedServerInfo.id
-      })
-      console.log('✓ Owner role manually set')
-    } catch (err) {
-      console.warn('Error setting owner role manually:', err.message)
-    }
-    
-    // Update server info
-    try {
-      await syncBase.serverInitializer.updateServerInfo({
-        name: serverName,
-        description: 'Updated description'
-      })
-      console.log('Server updated using direct database update')
-      
-      // Verify update
-      const finalServerInfo = await syncBase.serverInitializer.getServerInfo()
-      if (finalServerInfo && finalServerInfo.description === 'Updated description') {
-        console.log('✓ Server info updates correctly')
-      } else {
-        console.warn('Server info did not update correctly:', finalServerInfo)
-      }
-      
-      // Verify owner role
-      const isOwner = await syncBase.serverInitializer.hasAdminPermission()
-      if (isOwner) {
-        console.log('✓ Owner role is set correctly')
-      } else {
-        console.warn('Owner role verification failed')
-      }
-      
-      console.log('Server info:', finalServerInfo)
-    } catch (err) {
-      console.warn('Error updating server info:', err.message)
-    }
-    
-    console.log('Server initialized successfully!')
-    console.log('Test completed')
-  } catch (err) {
-    console.error('Error initializing server:', err)
-    throw err
-  }
-  
+  console.log('✓ Server initialized successfully')
+
+  // Get server info
+  const serverInfo = await server.getServerInfo()
+  assert(serverInfo, 'Server info should exist after initialization')
+  assert.equal(serverInfo.name, 'Test Server', 'Server name should match')
+  assert.equal(serverInfo.description, 'A server for testing the SyncBase architecture', 'Server description should match')
+  console.log('✓ Server info is correct')
+
+  // Update server info
+  await server.updateServerInfo({
+    name: 'Updated Server Name',
+    description: 'This description has been updated'
+  })
+
+  const updatedServerInfo = await server.getServerInfo()
+  assert.equal(updatedServerInfo.name, 'Updated Server Name', 'Server name should be updated')
+  assert.equal(updatedServerInfo.description, 'This description has been updated', 'Server description should be updated')
+  console.log('✓ Server info updates correctly')
+
+  // Confirm creator has OWNER role by their public key
+  const creatorId = b4a.toString(server.crypto.publicKey, 'hex')
+  const ownerRole = await server.roleManager.checkUserRole(creatorId, "OWNER")
+  console.log({ownerRole})
+  assert(ownerRole, 'Owner role should exist')
+  console.log('✓ Owner role is set correctly')
+
+  // Clean up
+  await server.close()
   console.log('✓ Server closed successfully')
 }
 
-/**
- * Test channel operations
- */
 async function testChannelOperations() {
-  try {
-    // Create a channel
-    console.log('Creating a channel...')
-    const channelName = 'Test Channel'
-    const channelTopic = 'Test channel topic'
-    
-    const channel = await syncBase.channels.createChannel({
-      name: channelName,
-      type: 'TEXT',
-      topic: channelTopic
-    })
-    
-    console.log('Channel created:', channel)
-    
-    if (!channel || !channel.id) {
-      throw new Error('Failed to create channel')
-    }
-    
-    // Wait for the channel to be processed
-    await delay(1000)
-    
-    // Get the channel
-    console.log('Getting the channel...')
-    const retrievedChannel = await syncBase.channels.getChannel({
-      channelId: channel.id
-    })
-    
-    if (!retrievedChannel) {
-      throw new Error('Failed to retrieve channel')
-    }
-    
-    console.log('Retrieved channel:', retrievedChannel)
-    
-    // Verify channel data
-    if (retrievedChannel.name !== channelName) {
-      console.error('Channel name mismatch: Expected', channelName, 'but got', retrievedChannel.name)
-      throw new Error('Channel name mismatch')
-    }
-    
-    // Topic might be null if not supported in the current implementation
-    if (retrievedChannel.topic !== channelTopic && retrievedChannel.topic !== null && retrievedChannel.topic !== '') {
-      console.error('Channel topic mismatch: Expected', channelTopic, 'but got', retrievedChannel.topic)
-      throw new Error('Channel topic mismatch')
-    }
-    
-    console.log('Channel data verified')
-    
-    // Due to SESSION_NOT_WRITABLE limitations in the test environment, 
-    // we'll skip actual updates and simply verify that the channel API works
-    console.log('Note: Skipping direct database updates due to SESSION_NOT_WRITABLE limitations')
-    console.log('Verified that channels can be created and retrieved successfully')
-    
-    // Skip delete operations directly in the database for the same reason
-    // But we still consider channel operations test successful since we verified 
-    // the main functionality works
-    console.log('Channel operations test successfully verified basic functionality')
-    
-  } catch (err) {
-    console.error('Error in channel operations test:', err)
-    throw err
-  }
+  console.log('\n--- Testing Channel Operations ---')
+
+  const storePath = path.join(TEST_DIR, 'server2')
+  const store = new Corestore(storePath)
+  await store.ready()
+
+  const server = new SyncBase(store, {
+    seedPhrase: 'test seed phrase for channel operations'
+  })
+
+  await server.ready()
+  await server.initialize({ name: 'Channel Test Server' })
+  console.log('✓ Test server initialized')
+
+  // Store the creator's ID from their public key
+  const creatorId = b4a.toString(server.crypto.publicKey, 'hex')
+
+  // Create channels
+  const generalChannel = await server.channels.createChannel({
+    name: 'general-2',
+    type: 'TEXT',
+    topic: 'General discussions'
+  })
+  assert(generalChannel.id, 'Channel should have an ID')
+  assert.equal(generalChannel.name, 'general-2', 'Channel name should match')
+  console.log('✓ Created general channel')
+
+  await sleep(100)
+  const announcementsChannel = await server.channels.createChannel({
+    name: 'announcements',
+    type: 'TEXT',
+    topic: 'Important server announcements'
+  })
+  await sleep(100)
+
+  console.log('✓ Created announcements channel')
+
+  // List all channels
+  const channels = await server.channels.getChannels()
+  assert.equal(channels.length, 3, 'Server should have 2 channels')
+  console.log(`✓ Server has ${channels.length} channels as expected`)
+
+  // Verify the channel creator is correctly recorded
+  const channelData = await server.channels.getChannel(generalChannel.id)
+  assert.equal(channelData.createdBy, creatorId, 'Channel creator should match the public key of the server creator')
+  console.log('✓ Channel creator correctly recorded')
+
+  // Get channel by ID
+  const retrievedChannel = await server.channels.getChannel(generalChannel.id)
+  console.log(retrievedChannel)
+  assert.equal(retrievedChannel.id, generalChannel.id, 'Retrieved channel ID should match')
+  console.log('✓ Retrieved channel correctly')
+
+  // Update channel
+  const updatedChannel = await server.channels.updateChannel({
+    channelId: generalChannel.id,
+    name: 'general-chat3',
+    topic: 'Updated topic'
+  })
+  await sleep(100)
+
+
+  assert.equal(updatedChannel.name, 'general-chat3', 'Channel name should be updated')
+  assert.equal(updatedChannel.topic, 'Updated topic', 'Channel topic should be updated')
+  console.log('✓ Updated channel successfully')
+
+  // Delete channel
+  await server.channels.deleteChannel(announcementsChannel.id)
+  await sleep(100)
+
+  const remainingChannels = await server.channels.getChannels()
+  console.log({remainingChannels})
+  assert.equal(remainingChannels.length, 2, 'One channel should remain after deletion')
+  console.log('✓ Deleted channel successfully')
+
+  await server.close()
 }
 
-/**
- * Test message operations
- */
 async function testMessageOperations() {
-  try {
-    // Create a channel for messages
-    console.log('Creating a test channel for messages...')
-    const channelName = 'Message Test Channel'
-    const channelTopic = 'Channel for testing messages'
-    
-    const channel = await syncBase.channels.createChannel({
-      name: channelName,
-      type: 'TEXT',
-      topic: channelTopic
-    })
-    
-    console.log('Test channel created:', channel)
-    
-    if (!channel || !channel.id) {
-      throw new Error('Failed to create test channel for messages')
-    }
-    
-    // Wait for the channel to be processed
-    await delay(1000)
-    
-    // Simply verify that the channel was created
-    console.log('Channel for messages was created successfully')
-    console.log('Verifying message operations functionality exists')
-    
-    // Verify message functionality exists but don't actually test it
-    // since we know there are issues with the encoding of attachments
-    if (typeof syncBase.messages.sendMessage === 'function') {
-      console.log('✓ Message sending functionality exists')
-    }
-    
-    if (typeof syncBase.messages.getMessage === 'function') {
-      console.log('✓ Message retrieval functionality exists')
-    }
-    
-    if (typeof syncBase.messages.editMessage === 'function') {
-      console.log('✓ Message editing functionality exists')
-    }
-    
-    if (typeof syncBase.messages.deleteMessage === 'function') {
-      console.log('✓ Message deletion functionality exists')
-    }
-    
-    console.log('Message operations test completed (partial test only)')
-    
-    // Skip direct database operations due to SESSION_NOT_WRITABLE limitations
-    console.log('Note: Skipping channel deletion due to possible SESSION_NOT_WRITABLE limitations')
-    
-  } catch (err) {
-    console.error('Error in message operations test:', err)
-    throw err
-  }
+  console.log('\n--- Testing Message Operations ---')
+
+  const storePath = path.join(TEST_DIR, 'server3')
+  const store = new Corestore(storePath)
+  await store.ready()
+
+  const server = new SyncBase(store, {
+    seedPhrase: 'test seed phrase for message operations'
+  })
+
+  await server.ready()
+  await server.initialize({ name: 'Message Test Server' })
+
+  // Store the creator's ID from their public key
+  const creatorId = b4a.toString(server.crypto.publicKey, 'hex')
+
+  // Create a channel for messages
+  const channel = await server.channels.createChannel({
+    name: 'general',
+    type: 'TEXT'
+  })
+  console.log('✓ Created test channel')
+
+  // Send messages
+  const message1 = await server.messages.sendMessage({
+    channelId: channel.id,
+    content: 'Hello world! This is test message 1.'
+  })
+  assert(message1.id, 'Message should have an ID')
+  console.log('✓ Sent message 1')
+
+  const message2 = await server.messages.sendMessage({
+    channelId: channel.id,
+    content: 'This is test message 2.'
+  })
+  console.log('✓ Sent message 2')
+
+  // Get messages from channel
+  const messages = await server.messages.getMessages({ channelId: channel.id })
+  assert.equal(messages.length, 2, 'Channel should have 2 messages')
+  console.log(`✓ Retrieved ${messages.length} messages from channel`)
+
+  // Verify message author is recorded correctly
+  const messageData = await server.messages.getMessage(message1.id)
+  assert.equal(messageData.author, creatorId, 'Message author should match the public key of the server creator')
+  console.log('✓ Message author correctly recorded')
+
+  // Edit a message
+  const editedMessage = await server.messages.editMessage({
+    messageId: message2.id,
+    content: 'This message has been edited!'
+  })
+  assert.equal(editedMessage.content, 'This message has been edited!', 'Message content should be updated')
+  console.log('✓ Edited message successfully')
+
+  // Retrieve edited message
+  const retrievedMessage = await server.messages.getMessage(message2.id)
+  assert.equal(retrievedMessage.content, 'This message has been edited!', 'Retrieved message should have updated content')
+  console.log('✓ Retrieved edited message successfully')
+
+  // Delete a message
+  await server.messages.deleteMessage({ messageId: message1.id })
+  const remainingMessages = await server.messages.getMessages({ channelId: channel.id })
+  assert.equal(remainingMessages.length, 1, 'One message should remain after deletion')
+  console.log('✓ Deleted message successfully')
+
+  await server.close()
 }
 
 async function testServerReplication() {
@@ -390,62 +311,19 @@ async function testServerReplication() {
   }
 }
 
-// Simple test just for server initialization
-async function testServerInit() {
-  console.log('Starting SyncBase tests...')
-  console.log('Testing server initialization...')
-
-  try {
-    // Create a new store for this test
-    const storePath = path.join(TEST_DIR, 'server-init-test')
-    const store = new Corestore(storePath)
-    await store.ready()
-    
-    // Create a new SyncBase instance
-    const syncbase = new SyncBase(store, {
-      seedPhrase: 'test seed phrase for server initialization',
-      replicate: false // Disable replication for tests
-    })
-
-    await syncbase.ready()
-    console.log('SyncBase is ready')
-
-    // Initialize the server
-    await syncbase.initialize({
-      name: 'Test Server',
-      description: 'A test server created in the test file'
-    })
-    console.log('Server initialized')
-
-    // Wait for any pending operations
-    await new Promise(resolve => setTimeout(resolve, 1000))
-
-    // Check if the server was created
-    const server = await syncbase.getServerInfo()
-    console.log('Server info:', server)
-
-    if (server) {
-      console.log('Server initialized successfully!')
-    } else {
-      console.error('Failed to initialize server')
-    }
-
-    await syncbase.close()
-  } catch (err) {
-    console.error('Error in test:', err)
-  }
-}
-
-// Start the tests
-runTests();
-
-// Run just the server init test
-testServerInit()
+// Run all tests
+runTests()
   .then(() => {
-    console.log('Test completed')
-    cleanup()
+    console.log('\nAll tests completed successfully!')
+    process.exit(0)
   })
   .catch(err => {
-    console.error('Test failed:', err)
-    cleanup()
+    fs.rmdirSync(TEST_DIR)
+    console.error('Test runner failed:', err)
+    process.exit(1)
   })
+
+
+  function sleep(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+}

@@ -43,16 +43,10 @@
       "name": "channel",
       "namespace": "server",
       "compact": false,
-      "flagsPosition": 4,
+      "flagsPosition": 3,
       "fields": [
         {
           "name": "id",
-          "required": true,
-          "type": "string",
-          "version": 1
-        },
-        {
-          "name": "serverId",
           "required": true,
           "type": "string",
           "version": 1
@@ -172,7 +166,7 @@
         {
           "name": "publicKey",
           "required": true,
-          "type": "buffer",
+          "type": "string",
           "version": 1
         },
         {
@@ -210,8 +204,8 @@
     {
       "name": "role",
       "namespace": "server",
-      "compact": false,
-      "flagsPosition": -1,
+      "compact": true,
+      "flagsPosition": 3,
       "fields": [
         {
           "name": "userId",
@@ -233,13 +227,13 @@
         },
         {
           "name": "updatedAt",
-          "required": true,
+          "required": false,
           "type": "int",
           "version": 1
         },
         {
           "name": "updatedBy",
-          "required": true,
+          "required": false,
           "type": "string",
           "version": 1
         }
