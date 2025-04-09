@@ -57,18 +57,24 @@
     },
     {
       "id": 9,
+      "name": "@server/create-user",
+      "requestType": "@server/user",
+      "version": 1
+    },
+    {
+      "id": 10,
       "name": "@server/create-invite",
       "requestType": "@server/invite",
       "version": 1
     },
     {
-      "id": 10,
+      "id": 11,
       "name": "@server/claim-invite",
       "requestType": "@server/invite",
       "version": 1
     },
     {
-      "id": 11,
+      "id": 12,
       "name": "@server/revoke-invite",
       "requestType": "@server/invite",
       "version": 1

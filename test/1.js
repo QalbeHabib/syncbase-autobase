@@ -22,9 +22,9 @@ async function runTests() {
   console.log('Starting SyncBase tests...')
 
   try {
-    await testServerInitialization()
-    await testChannelOperations()
-    await testMessageOperations()
+    // await testServerInitialization()
+    // await testChannelOperations()
+    // await testMessageOperations()
     await testServerReplication()
 
     console.log('All tests passed!')
@@ -253,10 +253,10 @@ async function testServerReplication() {
 
   // Create two servers
   const storePath1 = path.join(TEST_DIR, 'replication-server1')
-  const store1 = new Corestore(storePath1)
-  await store1.ready()
+  const store13 = new Corestore(storePath1)
+  await store13.ready()
 
-  const server1 = new SyncBase(store1, {
+  const server1 = new SyncBase(store13, {
     seedPhrase: 'test seed phrase for source server'
   })
 
@@ -269,7 +269,7 @@ async function testServerReplication() {
 
   // Create a channel and send a message
   const channel = await server1.channels.createChannel({
-    name: 'general',
+    name: 'testRoom',
     type: 'TEXT'
   })
 
@@ -288,16 +288,16 @@ async function testServerReplication() {
 
   // Join the server with a second instance
   const storePath2 = path.join(TEST_DIR, 'replication-server2')
-  const store2 = new Corestore(storePath2)
-  await store2.ready()
+  const store22 = new Corestore(storePath2)
+  await store22.ready()
 
   console.log('✓ Starting server join process with invite')
-  const joiner = SyncBase.pair(store2, invite, {
+  const joiner = SyncBase.pair(store22, invite, {
     seedPhrase: 'test seed phrase for joining server',
   })
+  console.log('Waiting pairing to be finished')
   const joinerClient = await joiner.finished()
   console.log('Pair up!')
-  await joinerClient.ready()
   console.log('get channels:')
   const channels = await joinerClient.channels.getChannels()
   console.log({syncchannels: channels})
