@@ -257,7 +257,6 @@ async function testServerReplication() {
   await store1.ready()
 
   const server1 = new SyncBase(store1, {
-    replicate: true,
     seedPhrase: 'test seed phrase for source server'
   })
 
@@ -294,7 +293,7 @@ async function testServerReplication() {
 
   console.log('✓ Starting server join process with invite')
   const joiner = SyncBase.pair(store2, invite, {
-    seedPhrase: 'test seed phrase for joining server'
+    seedPhrase: 'test seed phrase for joining server',
   })
   const joinerClient = await joiner.finished()
   console.log('Pair up!')
