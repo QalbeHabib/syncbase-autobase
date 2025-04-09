@@ -232,7 +232,7 @@ async function testMessageOperations() {
 
   // Retrieve edited message
   const retrievedMessage = await server.messages.getMessage(message2.id, message2.channelId)
-  console.log({retrievedMessage})
+  console.log({ retrievedMessage })
   assert.equal(retrievedMessage.content, 'This message has been edited!', 'Retrieved message should have updated content')
   console.log('✓ Retrieved edited message successfully')
 
@@ -299,20 +299,9 @@ async function testServerReplication() {
   const joinerClient = await joiner.finished()
   console.log('Pair up!')
   await joinerClient.ready()
-
-  try {
-    // This would normally connect to the network but we're testing locally
-    // In a real test, we'd need to set up the networking layer
-    console.log('✓ Join process started (note: actual replication requires network connection)')
-
-    console.log('✓ Replication test successful')
-  } catch (err) {
-    // This is expected to fail in a local test without networking
-    console.log('✓ Expected failure without actual network connection:', err.message)
-  } finally {
-    try { await joiner.close() } catch (e) { }
-    await server1.close()
-  }
+  console.log('get channels:')
+  const channels = await joinerClient.channels.getChannels()
+  console.log({syncchannels: channels})
 }
 
 // Run all tests
