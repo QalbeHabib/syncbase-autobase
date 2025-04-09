@@ -297,6 +297,7 @@ async function testServerReplication() {
   })
   console.log('Waiting pairing to be finished')
   const joinerClient = await joiner.finished()
+  await joinerClient.ready()
   console.log('Pair up!')
   console.log('get channels:')
   const channels = await joinerClient.channels.getChannels()
