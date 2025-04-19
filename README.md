@@ -141,6 +141,78 @@ this.router.add("@server/send-message", async (data, context) => {
 });
 ```
 
+## Updates to Previous Fixes
+
+This update introduces additional improvements to address two specific issues:
+
+1. **Bi-directional sync issue**: Fixed a problem where messages would only synchronize in one direction (User 1 → User 2, but not User 2 → User 1).
+
+2. **High-volume message handling**: Improved performance and reliability when handling many messages at once, preventing desynchronization during high-volume operations.
+
+### Improved Changes
+
+#### 1. Proper Writer Authorization
+
+The underlying issue with one-way syncing was related to writer permissions not being correctly propagated between peers. The fix:
+
+- Implemented automatic writer acknowledgment in the `_apply` function
+- Enhanced the message handler to ensure senders are added as writers
+- Improved the invite handling process to verify writer permissions
+
+```javascript
+// Automatic writer acknowledgment in _apply
+if (node.from?.key && !b4a.equals(node.from.key, this.base.local.key)) {
+  try {
+    // Check if this writer is already acknowledged
+    const isWriter = this.base.writers.some(
+      (w) => w.key && b4a.equals(w.key, node.from.key)
+    );
+
+    if (!isWriter) {
+      console.log(
+        `Auto-acknowledging writer: ${b4a.toString(node.from.key, "hex")}`
+      );
+      await host.addWriter(node.from.key, { indexer: true });
+      await host.ackWriter(node.from.key);
+    }
+  } catch (err) {
+    console.warn(`Error acknowledging writer: ${err.message}`);
+  }
+}
+```
+
+#### 2. Batch Processing and Linearization
+
+For high-volume message handling:
+
+- Added operation batching to prevent overwhelming the system
+- Implemented intermediate flush operations between batches
+- Added forced linearization after high-volume operations
+- Improved error handling to continue processing despite individual failures
+
+```javascript
+// Batch processing with intermediate flushes
+currentBatch++;
+if (currentBatch >= MAX_BATCH_SIZE) {
+  await view.flush();
+  await sleep(10); // Small pause between batches
+  currentBatch = 0;
+}
+
+// Force update after high-volume operations
+if (processedInThisRun.size > 5) {
+  await this.base.update();
+}
+```
+
+#### 3. Enhanced Pairing Process
+
+Improved the pairing process to be more reliable:
+
+- Added configurable timeouts and retries
+- Improved error handling during the pairing process
+- Implemented fallback resolution for problematic connections
+
 ## Developer Guidelines
 
 When working with Autobase in optimistic mode, follow these guidelines:
@@ -159,12 +231,23 @@ When working with Autobase in optimistic mode, follow these guidelines:
 
 ## Testing
 
-The fixes have been tested with our existing test suite:
+The fixes have been verified with expanded tests that specifically check bidirectional message flow and high-volume scenarios.
 
-- `node test/1.js` - Tests server creation and pairing
-- `node test/2.js` - Tests message synchronization between peers
+To run the tests:
 
-Both tests now pass successfully with proper operation synchronization.
+```
+node test/2.js
+```
+
+These tests ensure that:
+
+- Messages sent from User 2 arrive at User 1 (previously failing)
+- Rapid message sending does not cause desynchronization
+- The system properly recovers from connection issues
+
+## Conclusion
+
+These improvements make the system significantly more reliable in real-world usage patterns, ensuring consistent bidirectional synchronization even during high message volumes or network issues.
 
 ## References
 
