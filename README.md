@@ -249,6 +249,88 @@ These tests ensure that:
 
 These improvements make the system significantly more reliable in real-world usage patterns, ensuring consistent bidirectional synchronization even during high message volumes or network issues.
 
+## Multi-User Synchronization
+
+The system now supports robust synchronization between multiple users (three or more) using two distinct connection methods:
+
+### 1. Invite-Based Pairing
+
+The primary method for users to join a server is through the invite system:
+
+- Server owner creates an invite code with `createInvite()`
+- The invite code is shared with the user who wants to join
+- New user connects using `SyncBase.pair(store, inviteCode, options)`
+- Pairing process uses BlindPairing to securely share encryption keys
+- New user is automatically granted MEMBER role in the server
+
+```javascript
+// Server owner creates an invite
+const inviteCode = await server.createInvite({ expireInMinutes: 30 });
+
+// New user joins using the invite
+const pairer = SyncBase.pair(store, inviteCode, { seedPhrase: "user-seed" });
+const joinedServer = await pairer.finished();
+```
+
+### 2. Direct Connection Method
+
+For advanced use cases, users can join directly if they already have the server keys:
+
+```javascript
+// Direct connection using known server keys
+const directServer = new SyncBase(store, {
+  seedPhrase: "user-seed",
+  replicate: true,
+  key: existingServerKey, // The server's public key
+  encryptionKey: serverEncryptionKey, // The server's encryption key
+});
+```
+
+This method bypasses the invite process but requires secure off-band sharing of the server keys. It's useful for:
+
+- System administration and maintenance
+- Recovering access to existing servers
+- Specialized deployment scenarios
+
+### Implementation Details
+
+The connection reliability improvements include:
+
+1. **Enhanced Pairing Process**:
+
+   - Configurable timeouts and automatic retries
+   - Improved error handling with detailed logging
+   - Fallback mechanisms to ensure successful connections
+
+2. **Writer Authorization**:
+
+   - Automatic writer acknowledgment during message handling
+   - Proper permission propagation across the network
+   - Ensures all users can contribute to the server
+
+3. **Multi-Directional Synchronization**:
+   - Messages flow correctly between all connected users
+   - Operations are processed in appropriate dependency order
+   - Robust handling of concurrent operations
+
+All users in the network, regardless of how they joined, benefit from the same synchronization improvements and can participate equally in the server activities according to their assigned roles.
+
+### Testing Multi-User Scenarios
+
+The `test/3.js` file provides a comprehensive test of multi-user synchronization:
+
+```
+node test/3.js
+```
+
+This test demonstrates:
+
+- Server creation and initialization by the first user
+- Second user joining via invite code
+- Third user joining via direct connection
+- Message synchronization between all three users
+- Verification that all messages are visible to all users
+
 ## References
 
 - [Autobase documentation](https://docs.pears.com/building-blocks/autobase)

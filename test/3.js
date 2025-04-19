@@ -16,7 +16,19 @@ fs.mkdirSync(TEST_DIR, { recursive: true });
 // Cleanup function to remove test directories
 function cleanup() {
   console.log(`Cleaning up test directory: ${TEST_DIR}`);
-  rimraf.sync(TEST_DIR);
+  try {
+    // Ensure the directory exists before attempting to remove it
+    if (fs.existsSync(TEST_DIR)) {
+      rimraf.sync(TEST_DIR);
+      console.log(`✓ Successfully removed test directory: ${TEST_DIR}`);
+    } else {
+      console.log(
+        `Test directory doesn't exist or was already removed: ${TEST_DIR}`
+      );
+    }
+  } catch (err) {
+    console.error(`Error during cleanup: ${err.message}`);
+  }
 }
 
 // Helper sleep function
@@ -342,6 +354,9 @@ async function runTests() {
     // Brief pause before cleanup
     await sleep(1000);
     cleanup();
+
+    // Ensure exit after cleanup
+    console.log("Exiting with success code");
     process.exit(0);
   } catch (error) {
     console.error("\n❌ Tests failed:", error);
@@ -349,9 +364,25 @@ async function runTests() {
     // Brief pause before cleanup
     await sleep(1000);
     cleanup();
+
+    // Ensure exit after cleanup with error code
+    console.log("Exiting with error code");
     process.exit(1);
   }
 }
+
+// Register cleanup on process signals
+process.on("SIGINT", () => {
+  console.log("\nProcess interrupted");
+  cleanup();
+  process.exit(2);
+});
+
+process.on("SIGTERM", () => {
+  console.log("\nProcess terminated");
+  cleanup();
+  process.exit(2);
+});
 
 // Start testing
 runTests();
