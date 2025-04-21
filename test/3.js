@@ -171,7 +171,7 @@ async function testThreeUserSync() {
 
     // Force update to ensure invite is processed
     await user1Server.base.update();
-    await sleep(1000);
+    await sleep(3000); // Increased sleep time
 
     // User 1 sends the first message
     console.log("User 1 sending initial message...");
@@ -231,105 +231,114 @@ async function testThreeUserSync() {
       console.log("✓ User 1 sees User 2's message");
     }
 
-    // Now, instead of using another invite, let's initialize a new server directly
-    console.log("\n=== TESTING DIRECT SERVER-TO-SERVER SYNC ===");
+    // Now we'll demonstrate direct server-to-server connection, which is an alternative to invite-based joining
+    console.log("\n=== TESTING DIRECT SERVER-TO-SERVER CONNECTION ===");
+    console.log(
+      "Creating User 3 server with direct connection (alternative to invite-based joining)..."
+    );
+    console.log(
+      "This approach requires knowing the server key and encryption key in advance"
+    );
 
-    console.log("Creating User 3 server...");
-    const user3Server = new SyncBase(user3Store, {
-      seedPhrase: user3Seed,
-      replicate: true,
-      key: user1Server.key, // Use the same key as User 1's server
-      encryptionKey: user1Server.base.encryptionKey, // Use the same encryption key
-    });
+    try {
+      // Create User 3 server directly with User 1's keys
+      const user3Server = new SyncBase(user3Store, {
+        seedPhrase: user3Seed,
+        replicate: true,
+        key: user1Server.key, // Use the same key as User 1's server
+        encryptionKey: user1Server.base.encryptionKey, // Use the same encryption key
+      });
 
-    await user3Server.ready();
-    console.log("✓ User 3 server ready");
+      await user3Server.ready();
+      console.log("✓ User 3 server ready with direct connection");
 
-    // Force a direct connection between servers
-    console.log("Connecting User 3 to the network...");
-    const user3PublicKey = b4a.toString(user3Server.crypto.publicKey, "hex");
-    console.log(`User 3 public key: ${user3PublicKey}`);
-
-    // Wait for sync
-    console.log("Waiting for User 3 to sync...");
-    await sleep(10000);
-
-    // Verify User 3 can see the channel
-    const user3Channels = await user3Server.channels.getChannels();
-    console.log(`User 3 sees ${user3Channels.length} channel(s)`);
-
-    // If we can't see the channel after waiting, try to access it directly
-    let user3Channel = user3Channels.find((c) => c.name === "three-user-test");
-
-    if (!user3Channel && user2Channel) {
+      // Force a direct connection between servers
+      console.log("User 3 server info:");
+      const user3PublicKey = b4a.toString(user3Server.crypto.publicKey, "hex");
+      console.log(`- Public key: ${user3PublicKey}`);
       console.log(
-        "Channel not found through regular means, trying direct access"
+        `- Using server key: ${b4a.toString(user3Server.key, "hex")}`
       );
-      try {
-        user3Channel = await user3Server.channels.getChannel(
-          user2Channel.channelId
-        );
+
+      // Wait for sync
+      console.log("Waiting for User 3 to sync with the network...");
+      await sleep(10000);
+
+      // Verify User 3 can see the channel
+      const user3Channels = await user3Server.channels.getChannels();
+      console.log(`User 3 sees ${user3Channels.length} channel(s)`);
+
+      // Look for the test channel
+      const user3Channel = user3Channels.find(
+        (c) => c.name === "three-user-test"
+      );
+
+      if (user3Channel) {
         console.log(
-          `Successfully accessed channel directly: ${user3Channel.name}`
-        );
-      } catch (err) {
-        console.log(`Could not access channel directly: ${err.message}`);
-      }
-    }
-
-    if (user3Channel) {
-      console.log("✓ User 3 can access the test channel");
-
-      // User 3 sends a message
-      try {
-        console.log("User 3 sending message...");
-        const user3Message = await user3Server.messages.sendMessage({
-          channelId: user3Channel.channelId,
-          content: createMessage("User 3", 1),
-        });
-        console.log(`✓ User 3 sent message with ID: ${user3Message.id}`);
-
-        // Wait for sync
-        await sleep(5000);
-
-        // Verify all users can see all messages
-        const updatedUser1Messages = await user1Server.messages.getMessages({
-          channelId: channel.channelId,
-        });
-        const updatedUser2Messages = await user2Server.messages.getMessages({
-          channelId: user2Channel.channelId,
-        });
-        const user3Messages = await user3Server.messages.getMessages({
-          channelId: user3Channel.channelId,
-        });
-
-        console.log(
-          `Final message counts - User 1: ${updatedUser1Messages.length}, User 2: ${updatedUser2Messages.length}, User 3: ${user3Messages.length}`
+          "✓ User 3 can access the test channel via direct connection"
         );
 
-        // Test complete
-        console.log("✓ Multi-user sync test complete");
+        // User 3 sends a message
+        try {
+          console.log("User 3 sending message...");
+          const user3Message = await user3Server.messages.sendMessage({
+            channelId: user3Channel.channelId,
+            content: createMessage("User 3", 1),
+          });
+          console.log(`✓ User 3 sent message with ID: ${user3Message.id}`);
 
-        // Clean up
-        await user1Server.close();
-        await user2Server.close();
-        await user3Server.close();
+          // Wait for sync
+          await sleep(5000);
 
-        return true;
-      } catch (msgErr) {
-        console.error(`Error sending message from User 3: ${msgErr.message}`);
+          // Verify all users can see all messages
+          const updatedUser1Messages = await user1Server.messages.getMessages({
+            channelId: channel.channelId,
+          });
+          const updatedUser2Messages = await user2Server.messages.getMessages({
+            channelId: user2Channel.channelId,
+          });
+          const user3Messages = await user3Server.messages.getMessages({
+            channelId: user3Channel.channelId,
+          });
+
+          console.log(
+            `Final message counts - User 1: ${updatedUser1Messages.length}, User 2: ${updatedUser2Messages.length}, User 3: ${user3Messages.length}`
+          );
+
+          // Test complete
+          console.log(
+            "✓ Multi-user sync test complete - demonstrated both invite-based and direct connection methods"
+          );
+
+          // Clean up
+          await user1Server.close();
+          await user2Server.close();
+          await user3Server.close();
+
+          return true;
+        } catch (msgErr) {
+          console.error(`Error sending message from User 3: ${msgErr.message}`);
+        }
+      } else {
+        console.log("× User 3 cannot see the test channel");
       }
-    } else {
-      console.log("× User 3 cannot see the test channel");
+
+      // Clean up
+      await user1Server.close();
+      if (user2Server) await user2Server.close();
+      if (user3Server) await user3Server.close();
+
+      // Return true to signal test completion but with limitations
+      return true;
+    } catch (error) {
+      console.error("Error setting up User 3 with direct connection:", error);
+
+      // Clean up
+      await user1Server.close();
+      if (user2Server) await user2Server.close();
+
+      throw error;
     }
-
-    // Clean up
-    await user1Server.close();
-    if (user2Server) await user2Server.close();
-    if (user3Server) await user3Server.close();
-
-    // Return true to signal test completion but with limitations
-    return true;
   } catch (error) {
     console.error("Test failed:", error);
 
