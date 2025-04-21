@@ -19,6 +19,7 @@
     "compact-encoding": "^2.16.0",
     "corestore": "^7.0.7",
     "debounceify": "^1.1.0",
+    "fs-extra": "^11.3.0",
     "hyperbee": "^2.22.2",
     "hypercore": "^11.0.9",
     "hyperdb": "^4.10.0",
