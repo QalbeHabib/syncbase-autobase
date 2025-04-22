@@ -1,0 +1,86 @@
+{
+  "version": 0,
+  "offset": 0,
+  "schema": [
+    {
+      "name": "server",
+      "namespace": "server",
+      "id": 0,
+      "type": 1,
+      "indexes": [],
+      "schema": "@server/server",
+      "derived": false,
+      "key": [
+        "id"
+      ],
+      "trigger": null
+    },
+    {
+      "name": "channel",
+      "namespace": "server",
+      "id": 1,
+      "type": 1,
+      "indexes": [],
+      "schema": "@server/channel",
+      "derived": false,
+      "key": [
+        "channelId"
+      ],
+      "trigger": null
+    },
+    {
+      "name": "message",
+      "namespace": "server",
+      "id": 2,
+      "type": 1,
+      "indexes": [],
+      "schema": "@server/message",
+      "derived": false,
+      "key": [
+        "id",
+        "channelId"
+      ],
+      "trigger": null
+    },
+    {
+      "name": "user",
+      "namespace": "server",
+      "id": 3,
+      "type": 1,
+      "indexes": [],
+      "schema": "@server/user",
+      "derived": false,
+      "key": [
+        "id",
+        "publicKey"
+      ],
+      "trigger": null
+    },
+    {
+      "name": "role",
+      "namespace": "server",
+      "id": 4,
+      "type": 1,
+      "indexes": [],
+      "schema": "@server/role",
+      "derived": false,
+      "key": [
+        "userId"
+      ],
+      "trigger": null
+    },
+    {
+      "name": "invite",
+      "namespace": "server",
+      "id": 5,
+      "type": 1,
+      "indexes": [],
+      "schema": "@server/invite",
+      "derived": false,
+      "key": [
+        "id"
+      ],
+      "trigger": null
+    }
+  ]
+}

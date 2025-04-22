@@ -1,0 +1,83 @@
+{
+  "version": 1,
+  "schema": [
+    {
+      "id": 0,
+      "name": "@server/create-server",
+      "requestType": "@server/server",
+      "version": 1
+    },
+    {
+      "id": 1,
+      "name": "@server/update-server",
+      "requestType": "@server/server",
+      "version": 1
+    },
+    {
+      "id": 2,
+      "name": "@server/create-channel",
+      "requestType": "@server/channel",
+      "version": 1
+    },
+    {
+      "id": 3,
+      "name": "@server/update-channel",
+      "requestType": "@server/channel",
+      "version": 1
+    },
+    {
+      "id": 4,
+      "name": "@server/delete-channel",
+      "requestType": "@server/channel",
+      "version": 1
+    },
+    {
+      "id": 5,
+      "name": "@server/send-message",
+      "requestType": "@server/message",
+      "version": 1
+    },
+    {
+      "id": 6,
+      "name": "@server/edit-message",
+      "requestType": "@server/message",
+      "version": 1
+    },
+    {
+      "id": 7,
+      "name": "@server/delete-message",
+      "requestType": "@server/message",
+      "version": 1
+    },
+    {
+      "id": 8,
+      "name": "@server/set-role",
+      "requestType": "@server/role",
+      "version": 1
+    },
+    {
+      "id": 9,
+      "name": "@server/create-user",
+      "requestType": "@server/user",
+      "version": 1
+    },
+    {
+      "id": 10,
+      "name": "@server/create-invite",
+      "requestType": "@server/invite",
+      "version": 1
+    },
+    {
+      "id": 11,
+      "name": "@server/claim-invite",
+      "requestType": "@server/invite",
+      "version": 1
+    },
+    {
+      "id": 12,
+      "name": "@server/revoke-invite",
+      "requestType": "@server/invite",
+      "version": 1
+    }
+  ]
+}
