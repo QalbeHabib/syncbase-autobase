@@ -30,10 +30,14 @@ function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-async function runMultiUserInviteTest() {
-  console.log(
-    `\n=== TESTING MULTI-USER INVITE JOINING (${NUM_USERS} USERS) ===`
-  );
+// Wrap the main test logic in a function
+async function runTest(isOptimistic) {
+  console.log(`\n=== RUNNING TEST WITH OPTIMISTIC = ${isOptimistic} ===\n`);
+
+  // Test directory setup specific to this run
+  const TEST_DIR_RUN = path.join(TEST_DIR, `optimistic-${isOptimistic}`);
+  console.log(`Test directory for this run: ${TEST_DIR_RUN}`);
+  fs.mkdirSync(TEST_DIR_RUN, { recursive: true });
 
   const servers = [];
   let inviteCode;
@@ -42,13 +46,14 @@ async function runMultiUserInviteTest() {
   try {
     // Create and setup the host server (user 1)
     console.log("\n--- Setting up host server (User 1) ---");
-    const hostStorePath = path.join(TEST_DIR, "host-server");
+    const hostStorePath = path.join(TEST_DIR_RUN, "host-server");
     const hostStore = new Corestore(hostStorePath);
     await hostStore.ready();
 
     const hostServer = new SyncBase(hostStore, {
       seedPhrase: "test seed phrase for host server",
       replicate: true,
+      optimistic: isOptimistic, // Pass the optimistic setting
     });
 
     await hostServer.ready();
@@ -109,7 +114,7 @@ async function runMultiUserInviteTest() {
         `\n--- Setting up User ${i} (Joining with shared invite) ---`
       );
 
-      const userStorePath = path.join(TEST_DIR, `user${i}-server`);
+      const userStorePath = path.join(TEST_DIR_RUN, `user${i}-server`);
       const userStore = new Corestore(userStorePath);
       await userStore.ready();
 
@@ -129,6 +134,7 @@ async function runMultiUserInviteTest() {
           const userPairer = SyncBase.pair(userStore, inviteCode, {
             seedPhrase: `test seed phrase for user ${i}`,
             timeout: 30000, // 30 second timeout
+            optimistic: isOptimistic, // Pass the optimistic setting
           });
 
           console.log(`Waiting for User ${i} pairing to complete...`);
@@ -374,26 +380,54 @@ async function runMultiUserInviteTest() {
     }
 
     console.log(
-      `\n✅ Multi-user invite test complete with ${servers.length} users!`
+      `\n✅ Multi-user invite test complete for optimistic=${isOptimistic} with ${servers.length} users!`
     );
     return servers.length >= 2; // Success if at least 2 users joined
   } catch (error) {
-    console.error("\n❌ Test failed:", error);
-    throw error;
+    console.error(`\n❌ Test failed for optimistic=${isOptimistic}:`, error);
+    throw error; // Re-throw to indicate failure
+  } finally {
+    // Cleanup specific to this run (optional, could cleanup at the end)
+    // cleanup(TEST_DIR_RUN);
   }
 }
 
-// Run the test
-runMultiUserInviteTest()
-  .then((success) => {
-    console.log(
-      `\nTest completed ${success ? "successfully" : "with issues"}!`
-    );
-    cleanup();
-    process.exit(success ? 0 : 1);
-  })
-  .catch((err) => {
-    console.error("\nTest runner failed:", err);
-    cleanup();
+// Main execution block
+async function main() {
+  let successOptimistic = false;
+  let successNonOptimistic = false;
+
+  try {
+    successOptimistic = await runTest(true);
+  } catch (err) {
+    console.error("Error during optimistic=true run");
+  }
+
+  console.log("\n".repeat(3)); // Add spacing between runs
+
+  try {
+    successNonOptimistic = await runTest(false);
+  } catch (err) {
+    console.error("Error during optimistic=false run");
+  }
+
+  // Final Cleanup
+  cleanup();
+
+  console.log("\n--- OVERALL TEST SUMMARY ---");
+  console.log(`Optimistic=true run ${successOptimistic ? "PASSED" : "FAILED"}`);
+  console.log(
+    `Optimistic=false run ${successNonOptimistic ? "PASSED" : "FAILED"}`
+  );
+
+  if (successOptimistic && successNonOptimistic) {
+    console.log("\nBoth test runs completed successfully!");
+    process.exit(0);
+  } else {
+    console.error("\nOne or more test runs failed.");
     process.exit(1);
-  });
+  }
+}
+
+// Run the main function
+main();
