@@ -16,6 +16,7 @@
     "autobase": "^7.0.34",
     "b4a": "^1.6.7",
     "blind-pairing": "^2.3.1",
+    "chalk": "^5.4.1",
     "compact-encoding": "^2.16.0",
     "corestore": "^7.0.7",
     "debounceify": "^1.1.0",

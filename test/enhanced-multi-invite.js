@@ -5,10 +5,11 @@ const fs = require("fs");
 const rimraf = require("rimraf");
 const b4a = require("b4a");
 const SyncBase = require("../lib/syncbase");
+const colors = require("./utils/colors");
 
 // Test directory setup
 const TEST_DIR = path.join("./cores", "enhanced-multi-invite-" + Date.now());
-console.log(`Test directory: ${TEST_DIR}`);
+console.log(colors.debug(`Test directory: ${TEST_DIR}`));
 fs.mkdirSync(TEST_DIR, { recursive: true });
 
 // Number of users to test
@@ -16,12 +17,12 @@ const NUM_USERS = 6; // Host + 5 joiners
 
 // Cleanup function to run after tests
 function cleanup() {
-  console.log(`Cleaning up test directory: ${TEST_DIR}`);
+  console.log(colors.debug(`Cleaning up test directory: ${TEST_DIR}`));
   try {
     rimraf.sync(TEST_DIR);
-    console.log("Cleanup complete");
+    console.log(colors.debug("Cleanup complete"));
   } catch (err) {
-    console.error("Error during cleanup:", err);
+    console.error(colors.error("Error during cleanup:"), err);
   }
 }
 
@@ -32,11 +33,13 @@ function sleep(ms) {
 
 // Wrap the main test logic in a function
 async function runTest(isOptimistic) {
-  console.log(`\n=== RUNNING TEST WITH OPTIMISTIC = ${isOptimistic} ===\n`);
+  console.log(
+    colors.header(`\n=== RUNNING TEST WITH OPTIMISTIC = ${isOptimistic} ===\n`)
+  );
 
   // Test directory setup specific to this run
   const TEST_DIR_RUN = path.join(TEST_DIR, `optimistic-${isOptimistic}`);
-  console.log(`Test directory for this run: ${TEST_DIR_RUN}`);
+  console.log(colors.debug(`Test directory for this run: ${TEST_DIR_RUN}`));
   fs.mkdirSync(TEST_DIR_RUN, { recursive: true });
 
   const servers = [];
@@ -45,7 +48,7 @@ async function runTest(isOptimistic) {
 
   try {
     // Create and setup the host server (user 1)
-    console.log("\n--- Setting up host server (User 1) ---");
+    console.log(colors.header("\n--- Setting up host server (User 1) ---"));
     const hostStorePath = path.join(TEST_DIR_RUN, "host-server");
     const hostStore = new Corestore(hostStorePath);
     await hostStore.ready();
@@ -57,31 +60,33 @@ async function runTest(isOptimistic) {
     });
 
     await hostServer.ready();
-    console.log("✓ Host server ready");
+    console.log(colors.success("✓ Host server ready"));
 
     // Initialize server
     await hostServer.initialize({
       name: "Enhanced Multi-User Invite Test Server",
       description: "Server for testing multiple users joining with one invite",
     });
-    console.log("✓ Host server initialized");
+    console.log(colors.success("✓ Host server initialized"));
 
     // Create a test channel
-    console.log("Creating test channel...");
+    console.log(colors.info("Creating test channel..."));
     const channel = await hostServer.channels.createChannel({
       name: "multi-invite-test-channel",
       type: "TEXT",
       topic: "Testing multi-user invite joining",
     });
     testChannelId = channel.channelId;
-    console.log(`✓ Created channel with ID: ${testChannelId}`);
+    console.log(colors.success(`✓ Created channel with ID: ${testChannelId}`));
 
     // Send an initial message from the host
     const initialMessage = await hostServer.messages.sendMessage({
       channelId: testChannelId,
       content: "Welcome to the enhanced multi-user invite test!",
     });
-    console.log(`✓ Host sent initial message with ID: ${initialMessage.id}`);
+    console.log(
+      colors.success(`✓ Host sent initial message with ID: ${initialMessage.id}`)
+    );
 
     // Store the host server
     servers.push({
@@ -97,12 +102,18 @@ async function runTest(isOptimistic) {
     await sleep(2000);
 
     // Create a single invite that will be used by all other users
-    console.log("\n--- Creating shared invite code ---");
+    console.log(colors.header("\n--- Creating shared invite code ---"));
     inviteCode = await hostServer.invites.createInvite({
       expireInDays: 1,
       maxUses: 0, // 0 means unlimited uses
     });
-    console.log(`✓ Created shared invite: ${inviteCode.substring(0, 30)}...`);
+    console.log(
+      colors.success(
+        `✓ Created shared invite: ${colors.invite(
+          inviteCode.substring(0, 30)
+        )}...`
+      )
+    );
 
     // Force update again
     await hostServer.base.update();
@@ -111,7 +122,9 @@ async function runTest(isOptimistic) {
     // Join process for users 2 through NUM_USERS
     for (let i = 2; i <= NUM_USERS; i++) {
       console.log(
-        `\n--- Setting up User ${i} (Joining with shared invite) ---`
+        colors.header(
+          `\n--- Setting up ${colors.user(i)} (Joining with shared invite) ---`
+        )
       );
 
       const userStorePath = path.join(TEST_DIR_RUN, `user${i}-server`);
@@ -126,31 +139,37 @@ async function runTest(isOptimistic) {
       while (!joinSuccess && joinAttempts < maxAttempts) {
         joinAttempts++;
         console.log(
-          `Join attempt ${joinAttempts}/${maxAttempts} for User ${i}`
+          colors.info(
+            `Join attempt ${joinAttempts}/${maxAttempts} for ${colors.user(i)}`
+          )
         );
 
         try {
-          console.log(`User ${i} joining with shared invite...`);
+          console.log(colors.info(`${colors.user(i)} joining with shared invite...`));
           const userPairer = SyncBase.pair(userStore, inviteCode, {
             seedPhrase: `test seed phrase for user ${i}`,
             timeout: 30000, // 30 second timeout
             optimistic: isOptimistic, // Pass the optimistic setting
           });
 
-          console.log(`Waiting for User ${i} pairing to complete...`);
+          console.log(
+            colors.info(`Waiting for ${colors.user(i)} pairing to complete...`)
+          );
           userServer = await userPairer.finished();
-          console.log(`✓ User ${i} pairing completed`);
+          console.log(colors.success(`✓ ${colors.user(i)} pairing completed`));
           joinSuccess = true;
         } catch (pairErr) {
           console.error(
-            `× Error: User ${i} pairing attempt ${joinAttempts} failed:`,
+            colors.error(`× Error: ${colors.user(i)} pairing attempt ${joinAttempts} failed:`),
             pairErr.message
           );
 
           if (joinAttempts < maxAttempts) {
             // Wait longer between each retry
             const waitTime = joinAttempts * 2000;
-            console.log(`Waiting ${waitTime / 1000} seconds before retry...`);
+            console.log(
+              colors.warning(`Waiting ${waitTime / 1000} seconds before retry...`)
+            );
             await sleep(waitTime);
           }
         }
@@ -158,7 +177,7 @@ async function runTest(isOptimistic) {
 
       if (!joinSuccess) {
         console.error(
-          `× Failed to join User ${i} after ${maxAttempts} attempts.`
+          colors.error(`× Failed to join ${colors.user(i)} after ${maxAttempts} attempts.`)
         );
         continue; // Skip to next user
       }
@@ -177,28 +196,33 @@ async function runTest(isOptimistic) {
 
       // Check if user can see the channel
       try {
-        console.log(`Checking if User ${i} can see the channel...`);
+        console.log(colors.info(`Checking if ${colors.user(i)} can see the channel...`));
         const userChannels = await userServer.channels.getChannels();
 
         if (userChannels && userChannels.length > 0) {
-          console.log(`✓ User ${i} can see ${userChannels.length} channel(s)`);
+          console.log(
+            colors.success(`✓ ${colors.user(i)} can see ${userChannels.length} channel(s)`)
+          );
 
           const testChannel = userChannels.find(
             (c) => c.channelId === testChannelId
           );
 
           if (testChannel) {
-            console.log(`✓ User ${i} can see the test channel`);
+            console.log(colors.success(`✓ ${colors.user(i)} can see the test channel`));
 
             // Try to send a message from this user
             try {
+              const messageContent = `Hello from ${colors.user(i)}! I joined with the shared invite code.`;
               const userMessage = await userServer.messages.sendMessage({
                 channelId: testChannelId,
-                content: `Hello from User ${i}! I joined with the shared invite code.`,
+                content: messageContent,
               });
 
               console.log(
-                `✓ User ${i} sent message with ID: ${userMessage.id}`
+                colors.success(
+                  `✓ ${colors.user(i)} sent message with ID: ${colors.details(userMessage.id)}`
+                )
               );
 
               // Track this message
@@ -209,19 +233,19 @@ async function runTest(isOptimistic) {
               });
             } catch (sendErr) {
               console.error(
-                `× Error: User ${i} failed to send message:`,
+                colors.error(`× Error: ${colors.user(i)} failed to send message:`),
                 sendErr.message
               );
             }
           } else {
-            console.log(`× User ${i} cannot see the test channel`);
+            console.log(colors.warning(`× ${colors.user(i)} cannot see the test channel`));
           }
         } else {
-          console.log(`× User ${i} cannot see any channels`);
+          console.log(colors.warning(`× ${colors.user(i)} cannot see any channels`));
         }
       } catch (checkErr) {
         console.error(
-          `× Error checking channels for User ${i}:`,
+          colors.error(`× Error checking channels for ${colors.user(i)}:`),
           checkErr.message
         );
       }
@@ -231,18 +255,23 @@ async function runTest(isOptimistic) {
     }
 
     // Now have all users send a second message
-    console.log("\n--- Having all users send a second message ---");
+    console.log(colors.header("\n--- Having all users send a second message ---"));
     for (let i = 0; i < servers.length; i++) {
       const { server, userNum } = servers[i];
 
       try {
+        const messageContent = `This is a second message from ${colors.user(userNum)}!`;
         const secondMessage = await server.messages.sendMessage({
           channelId: testChannelId,
-          content: `This is a second message from User ${userNum}!`,
+          content: messageContent,
         });
 
         console.log(
-          `✓ User ${userNum} sent second message with ID: ${secondMessage.id}`
+          colors.success(
+            `✓ ${colors.user(userNum)} sent second message with ID: ${colors.details(
+              secondMessage.id
+            )}`
+          )
         );
 
         // Track this message
@@ -256,17 +285,17 @@ async function runTest(isOptimistic) {
         await sleep(500);
       } catch (err) {
         console.error(
-          `× User ${userNum} failed to send second message: ${err.message}`
+          colors.error(`× ${colors.user(userNum)} failed to send second message: ${err.message}`)
         );
       }
     }
 
     // Wait for all messages to sync
-    console.log("\n--- Waiting for messages to sync across all users ---");
+    console.log(colors.header("\n--- Waiting for messages to sync across all users ---"));
     await sleep(10000);
 
     // Final verification - check if all users can see all messages
-    console.log("\n--- Final Message Verification ---");
+    console.log(colors.header("\n--- Final Message Verification ---"));
 
     // Count total messages sent
     let totalMessagesSent = 0;
@@ -274,7 +303,7 @@ async function runTest(isOptimistic) {
       totalMessagesSent += user.messages.length;
     });
 
-    console.log(`Total messages sent across all users: ${totalMessagesSent}`);
+    console.log(colors.info(`Total messages sent across all users: ${totalMessagesSent}`));
 
     // Check message visibility for all users
     let successCount = 0;
@@ -292,7 +321,7 @@ async function runTest(isOptimistic) {
             channelId: testChannelId,
           });
 
-          console.log(`User ${userNum} can see ${messages.length} messages`);
+          console.log(colors.info(`${colors.user(userNum)} can see ${messages.length} messages`));
 
           // Detailed message visibility tracking
           messageVisibilityMatrix[userNum] = messages.length;
@@ -322,20 +351,28 @@ async function runTest(isOptimistic) {
 
             if (authorUserNum > 0) {
               console.log(
-                `  - User ${userNum} sees ${count} messages from User ${authorUserNum}`
+                colors.details(
+                  `  - ${colors.user(userNum)} sees ${count} messages from ${colors.user(
+                    authorUserNum
+                  )}`
+                )
               );
             } else {
               console.log(
-                `  - User ${userNum} sees ${count} messages from unknown author ${author.substring(
-                  0,
-                  8
-                )}...`
+                colors.details(
+                  `  - ${colors.user(userNum)} sees ${count} messages from unknown author ${author.substring(
+                    0,
+                    8
+                  )}...`
+                )
               );
             }
           }
 
           console.log(
-            `User ${userNum} can see messages from ${messageAuthors.size} different authors`
+            colors.info(
+              `${colors.user(userNum)} can see messages from ${messageAuthors.size} different authors`
+            )
           );
 
           if (messages.length > 0) {
@@ -344,47 +381,53 @@ async function runTest(isOptimistic) {
         }
       } catch (checkErr) {
         console.error(
-          `× Error checking messages for User ${userNum}:`,
+          colors.error(`× Error checking messages for ${colors.user(userNum)}:`),
           checkErr.message
         );
       }
     }
 
-    console.log("\n--- Message Visibility Summary ---");
+    console.log(colors.header("\n--- Message Visibility Summary ---"));
     for (const [userNum, messageCount] of Object.entries(
       messageVisibilityMatrix
     )) {
       const percentSeen = ((messageCount / totalMessagesSent) * 100).toFixed(1);
       console.log(
-        `User ${userNum} sees ${messageCount}/${totalMessagesSent} messages (${percentSeen}%)`
+        `${colors.user(userNum)} sees ${messageCount}/${totalMessagesSent} messages (${colors.info(
+          percentSeen
+        )}%)`
       );
     }
 
     console.log(
-      `\n${successCount} out of ${servers.length} users can see messages.`
+      colors.info(`\n${successCount} out of ${servers.length} users can see messages.`)
     );
 
     // Close all servers
-    console.log("\n--- Closing all servers ---");
+    console.log(colors.header("\n--- Closing all servers ---"));
 
     for (const { server, userNum } of servers) {
       try {
         await server.close();
-        console.log(`✓ Closed server for User ${userNum}`);
+        console.log(colors.success(`✓ Closed server for ${colors.user(userNum)}`));
       } catch (closeErr) {
         console.error(
-          `× Error closing server for User ${userNum}:`,
+          colors.error(`× Error closing server for ${colors.user(userNum)}:`),
           closeErr.message
         );
       }
     }
 
     console.log(
-      `\n✅ Multi-user invite test complete for optimistic=${isOptimistic} with ${servers.length} users!`
+      colors.success(
+        `\n✅ Multi-user invite test complete for optimistic=${isOptimistic} with ${servers.length} users!`
+      )
     );
     return servers.length >= 2; // Success if at least 2 users joined
   } catch (error) {
-    console.error(`\n❌ Test failed for optimistic=${isOptimistic}:`, error);
+    console.error(
+      colors.error(`\n❌ Test failed for optimistic=${isOptimistic}:`), error // Apply color only to the string
+    );
     throw error; // Re-throw to indicate failure
   } finally {
     // Cleanup specific to this run (optional, could cleanup at the end)
@@ -400,7 +443,7 @@ async function main() {
   try {
     successOptimistic = await runTest(true);
   } catch (err) {
-    console.error("Error during optimistic=true run");
+    console.error(colors.error("Error during optimistic=true run"));
   }
 
   console.log("\n".repeat(3)); // Add spacing between runs
@@ -408,23 +451,25 @@ async function main() {
   try {
     successNonOptimistic = await runTest(false);
   } catch (err) {
-    console.error("Error during optimistic=false run");
+    console.error(colors.error("Error during optimistic=false run"));
   }
 
   // Final Cleanup
   cleanup();
 
-  console.log("\n--- OVERALL TEST SUMMARY ---");
-  console.log(`Optimistic=true run ${successOptimistic ? "PASSED" : "FAILED"}`);
+  console.log(colors.header("\n--- OVERALL TEST SUMMARY ---"));
   console.log(
-    `Optimistic=false run ${successNonOptimistic ? "PASSED" : "FAILED"}`
+    `Optimistic=true run ${successOptimistic ? colors.pass("PASSED") : colors.fail("FAILED")}`
+  );
+  console.log(
+    `Optimistic=false run ${successNonOptimistic ? colors.pass("PASSED") : colors.fail("FAILED")}`
   );
 
   if (successOptimistic && successNonOptimistic) {
-    console.log("\nBoth test runs completed successfully!");
+    console.log(colors.success("\nBoth test runs completed successfully!"));
     process.exit(0);
   } else {
-    console.error("\nOne or more test runs failed.");
+    console.error(colors.fail("\nOne or more test runs failed."));
     process.exit(1);
   }
 }
